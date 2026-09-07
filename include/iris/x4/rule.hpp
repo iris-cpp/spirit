@@ -38,7 +38,7 @@
 
 namespace iris::x4 {
 
-template<class RuleID, X4Attribute Attr = unused_type, bool ForceAttribute = false>
+template<class RuleID, class RuleAttr = unused_type, bool ForceAttribute = false>
 struct rule;
 
 namespace detail {
@@ -385,12 +385,12 @@ concept RuleAttrCompatible =
 
 } // detail
 
-template<class RuleID, X4Attribute RuleAttr, bool ForceAttr>
+template<class RuleID, class RuleAttr, bool ForceAttr>
 struct rule : parser<rule<RuleID, RuleAttr, ForceAttr>>
 {
-    static_assert(X4Attribute<RuleAttr>);
-    static_assert(X4UnusedAttribute<RuleAttr> || !std::is_const_v<RuleAttr>, "Rule attribute cannot be const qualified");
-    static_assert(!std::is_same_v<std::remove_const_t<RuleAttr>, unused_container_type>, "`rule` with `unused_container_type` is not supported");
+    // This type MUST be constructible with incomplete types.
+    // Do NOT add `static_assert`s or other constructs that cause eager
+    // instantiation of `RuleAttr` within this class body.
 
     using id = RuleID;
     using attribute_type = RuleAttr;
@@ -419,6 +419,7 @@ struct rule : parser<rule<RuleID, RuleAttr, ForceAttr>>
     parse(It& first, Se const& last, Context const& ctx, Exposed& exposed_attr) const
         // never noexcept; requires very complex implementation details
     {
+        check_invariants();
         static_assert(has_attribute, "A rule must have an attribute. Check your rule definition.");
 
         // Remove the `_rule_var` context. This makes the actual `context` type passed to
@@ -476,6 +477,7 @@ struct rule : parser<rule<RuleID, RuleAttr, ForceAttr>>
     parse(It& first, Se const& last, Context const& ctx, unused_type const&) const
         // never noexcept; requires very complex implementation details
     {
+        check_invariants();
         // make sure we pass exactly the rule attribute type
         attribute_type no_attr; // default-initialize
 
@@ -497,6 +499,7 @@ struct rule : parser<rule<RuleID, RuleAttr, ForceAttr>>
             >
         )
     {
+        check_invariants();
         return {as_parser(std::forward<RHS>(rhs)), name};
     }
 
@@ -511,6 +514,7 @@ struct rule : parser<rule<RuleID, RuleAttr, ForceAttr>>
             >
         )
     {
+        check_invariants();
         return {as_parser(std::forward<RHS>(rhs)), name};
     }
 
@@ -530,6 +534,7 @@ struct rule : parser<rule<RuleID, RuleAttr, ForceAttr>>
             >
         )
     {
+        check_invariants();
         return {as_parser(std::forward<RHS>(rhs)), name};
     }
 
@@ -544,7 +549,16 @@ struct rule : parser<rule<RuleID, RuleAttr, ForceAttr>>
             >
         )
     {
+        check_invariants();
         return {as_parser(std::forward<RHS>(rhs)), name};
+    }
+
+private:
+    static constexpr void check_invariants() noexcept
+    {
+        static_assert(X4Attribute<RuleAttr>);
+        static_assert(X4UnusedAttribute<RuleAttr> || !std::is_const_v<RuleAttr>, "Rule attribute cannot be const qualified");
+        static_assert(!std::is_same_v<std::remove_const_t<RuleAttr>, unused_container_type>, "`rule` with `unused_container_type` is not supported");
     }
 };
 
