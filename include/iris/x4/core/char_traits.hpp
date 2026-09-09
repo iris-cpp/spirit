@@ -11,7 +11,7 @@
 // This header is intended for inclusion by user-facing, non-parser headers.
 // Do not add includes specific to X4's parser implementation here.
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
 
 #include <concepts>
 #include <type_traits>
@@ -57,6 +57,31 @@ template<class T, class ExpectedCharT>
 concept CharIncompatibleWith =
     CharLike<T> &&
     !std::same_as<T, ExpectedCharT>;
+
+namespace detail {
+
+template<class CharT>
+struct char_tokens;
+
+template<>
+struct char_tokens<char>
+{
+    static constexpr char hyphen = '-';
+};
+
+template<>
+struct char_tokens<wchar_t>
+{
+    static constexpr wchar_t hyphen = L'-';
+};
+
+template<>
+struct char_tokens<char32_t>
+{
+    static constexpr char32_t hyphen = U'-';
+};
+
+} // detail
 
 } // iris::x4
 
